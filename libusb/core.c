@@ -2307,7 +2307,7 @@ int API_EXPORTED libusb_init(libusb_context **ctx)
 {
 	
 	dgnetP_core_c("libusb_init(): zzzzzzzzzzzzzzzzzkkkk\n");
-	printf("libusb_init(): kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk\n")
+	printf("libusb_init(): kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk\n");
 
 	size_t priv_size = usbi_backend.context_priv_size;
 	struct libusb_context *_ctx;
