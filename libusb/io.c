@@ -22,6 +22,7 @@
  */
 
 #include "libusbi.h"
+#include "stdio.h"
 
 /**
  * \page libusb_io Synchronous and asynchronous device I/O
