@@ -32,6 +32,26 @@
 #include <syslog.h>
 #endif
 
+
+
+//------------------------------------------------------
+//------------------------------------------------------
+#include <stdarg.h>
+void dgnetP_core_c(char *format, ...){
+
+  FILE * pFile;
+  pFile = fopen ("/home/dgnet/libusb/out.txt","a");
+
+  va_list args;
+  va_start(args, format);
+  vfprintf(pFile, format, args);
+  va_end(args);  
+  fclose(pFile);
+}
+//------------------------------------------------------
+
+
+
 static const struct libusb_version libusb_version_internal =
 	{ LIBUSB_MAJOR, LIBUSB_MINOR, LIBUSB_MICRO, LIBUSB_NANO,
 	  LIBUSB_RC, "http://libusb.info" };
@@ -2279,8 +2299,8 @@ static enum libusb_log_level get_env_debug_level(void)
 int API_EXPORTED libusb_init(libusb_context **ctx)
 {
 	
-	printf("zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz\n");
-	
+	dgnetP_core_c("libusb_init(): zzzzzzzzzzzzzzzzz\n");
+
 	size_t priv_size = usbi_backend.context_priv_size;
 	struct libusb_context *_ctx;
 	int r;
