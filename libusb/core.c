@@ -2278,6 +2278,9 @@ static enum libusb_log_level get_env_debug_level(void)
  */
 int API_EXPORTED libusb_init(libusb_context **ctx)
 {
+	
+	printf("zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz\n")
+	
 	size_t priv_size = usbi_backend.context_priv_size;
 	struct libusb_context *_ctx;
 	int r;
