@@ -1322,6 +1322,7 @@ int API_EXPORTED libusb_open(libusb_device *dev,
 	
 	dgnetP_core_c("libusb_open(): zzzzzzzzzzzzzzzzz\n");
 	
+	
 	struct libusb_context *ctx = DEVICE_CTX(dev);
 	struct libusb_device_handle *_dev_handle;
 	size_t priv_size = usbi_backend.device_handle_priv_size;
