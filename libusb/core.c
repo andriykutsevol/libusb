@@ -37,6 +37,9 @@
 //------------------------------------------------------
 //------------------------------------------------------
 #include <stdarg.h>
+
+void dgnetP_core_c(char *format, ...);
+
 void dgnetP_core_c(char *format, ...){
 
   FILE * pFile;
