@@ -2471,6 +2471,9 @@ completed:
 static int handle_iso_completion(struct usbi_transfer *itransfer,
 	struct usbfs_urb *urb)
 {
+	
+	printf("LIBUSB: linux_usbfs.c: handle_iso_completion() 0 \n");
+	
 	struct libusb_transfer *transfer =
 		USBI_TRANSFER_TO_LIBUSB_TRANSFER(itransfer);
 	struct linux_transfer_priv *tpriv = usbi_get_transfer_priv(itransfer);
@@ -2651,6 +2654,10 @@ static int handle_control_completion(struct usbi_transfer *itransfer,
 
 static int reap_for_handle(struct libusb_device_handle *handle)
 {
+	
+	printf("LIBUSB: linux_usbfs.c: reap_for_handle() 0 \n");
+	
+	
 	struct linux_device_handle_priv *hpriv = usbi_get_device_handle_priv(handle);
 	int r;
 	struct usbfs_urb *urb = NULL;
@@ -2691,6 +2698,10 @@ static int reap_for_handle(struct libusb_device_handle *handle)
 static int op_handle_events(struct libusb_context *ctx,
 	void *event_data, unsigned int count, unsigned int num_ready)
 {
+	
+	printf("LIBUSB: linux_usbfs.c: op_handle_events() 0 \n");
+	
+	
 	struct pollfd *fds = event_data;
 	unsigned int n;
 	int r;
