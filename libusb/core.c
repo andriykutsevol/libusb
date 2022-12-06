@@ -1321,7 +1321,7 @@ int API_EXPORTED libusb_open(libusb_device *dev,
 {
 	
 	dgnetP_core_c("libusb_open(): zzzzzzzzzzzzzzzzz\n");
-
+	
 	
 	struct libusb_context *ctx = DEVICE_CTX(dev);
 	struct libusb_device_handle *_dev_handle;
@@ -2306,117 +2306,114 @@ static enum libusb_log_level get_env_debug_level(void)
 int API_EXPORTED libusb_init(libusb_context **ctx)
 {
 	
+	dgnetP_core_c("libusb_init(): zzzzzzzzzzzzzzzzz\n");
+
+	size_t priv_size = usbi_backend.context_priv_size;
+	struct libusb_context *_ctx;
+	int r;
+
+	usbi_mutex_static_lock(&default_context_lock);
+
+	if (!ctx && usbi_default_context) {
+		usbi_dbg(usbi_default_context, "reusing default context");
+		default_context_refcnt++;
+		usbi_mutex_static_unlock(&default_context_lock);
+		return 0;
+	}
+
+	/* check for first init */
+	if (!active_contexts_list.next) {
+		list_init(&active_contexts_list);
+		usbi_get_monotonic_time(&timestamp_origin);
+	}
+
+	_ctx = calloc(1, PTR_ALIGN(sizeof(*_ctx)) + priv_size);
+	if (!_ctx) {
+		usbi_mutex_static_unlock(&default_context_lock);
+		return LIBUSB_ERROR_NO_MEM;
+	}
+
+#if defined(ENABLE_LOGGING) && !defined(ENABLE_DEBUG_LOGGING)
+	if (NULL == ctx && default_context_options[LIBUSB_OPTION_LOG_LEVEL].is_set) {
+		_ctx->debug = default_context_options[LIBUSB_OPTION_LOG_LEVEL].arg.ival;
+	} else {
+		_ctx->debug = get_env_debug_level();
+	}
+	if (_ctx->debug != LIBUSB_LOG_LEVEL_NONE)
+		_ctx->debug_fixed = 1;
+#endif
+
+	usbi_mutex_init(&_ctx->usb_devs_lock);
+	usbi_mutex_init(&_ctx->open_devs_lock);
+	list_init(&_ctx->usb_devs);
+	list_init(&_ctx->open_devs);
+
+	/* apply default options to all new contexts */
+	for (enum libusb_option option = 0 ; option < LIBUSB_OPTION_MAX ; option++) {
+		if (LIBUSB_OPTION_LOG_LEVEL == option || !default_context_options[option].is_set) {
+			continue;
+		}
+		r = libusb_set_option(_ctx, option);
+		if (LIBUSB_SUCCESS != r)
+			goto err_free_ctx;
+	}
+
+	/* default context must be initialized before calling usbi_dbg */
+	if (!ctx) {
+		usbi_default_context = _ctx;
+		default_context_refcnt = 1;
+		usbi_dbg(usbi_default_context, "created default context");
+	}
+
+	usbi_dbg(_ctx, "libusb v%u.%u.%u.%u%s", libusb_version_internal.major, libusb_version_internal.minor,
+		libusb_version_internal.micro, libusb_version_internal.nano, libusb_version_internal.rc);
+
+	r = usbi_io_init(_ctx);
+	if (r < 0)
+		goto err_free_ctx;
+
+	usbi_mutex_static_lock(&active_contexts_lock);
+	list_add(&_ctx->list, &active_contexts_list);
+	usbi_mutex_static_unlock(&active_contexts_lock);
+
+	usbi_hotplug_init(_ctx);
+
+	if (usbi_backend.init) {
+		r = usbi_backend.init(_ctx);
+		if (r)
+			goto err_io_exit;
+	}
+
+	if (ctx)
+		*ctx = _ctx;
+
+	usbi_mutex_static_unlock(&default_context_lock);
 
 	return 0;
 
-// 	dgnetP_core_c("libusb_init(): zzzzzzzzzzzzzzzzz\n");
+err_io_exit:
+	usbi_mutex_static_lock(&active_contexts_lock);
+	list_del(&_ctx->list);
+	usbi_mutex_static_unlock(&active_contexts_lock);
 
-// 	size_t priv_size = usbi_backend.context_priv_size;
-// 	struct libusb_context *_ctx;
-// 	int r;
+	usbi_hotplug_exit(_ctx);
+	usbi_io_exit(_ctx);
 
-// 	usbi_mutex_static_lock(&default_context_lock);
+err_free_ctx:
+	if (!ctx) {
+		/* clear default context that was not fully initialized */
+		usbi_default_context = NULL;
+		default_context_refcnt = 0;
+	}
 
-// 	if (!ctx && usbi_default_context) {
-// 		usbi_dbg(usbi_default_context, "reusing default context");
-// 		default_context_refcnt++;
-// 		usbi_mutex_static_unlock(&default_context_lock);
-// 		return 0;
-// 	}
+	usbi_mutex_destroy(&_ctx->open_devs_lock);
+	usbi_mutex_destroy(&_ctx->usb_devs_lock);
 
-// 	/* check for first init */
-// 	if (!active_contexts_list.next) {
-// 		list_init(&active_contexts_list);
-// 		usbi_get_monotonic_time(&timestamp_origin);
-// 	}
+	free(_ctx);
 
-// 	_ctx = calloc(1, PTR_ALIGN(sizeof(*_ctx)) + priv_size);
-// 	if (!_ctx) {
-// 		usbi_mutex_static_unlock(&default_context_lock);
-// 		return LIBUSB_ERROR_NO_MEM;
-// 	}
+	usbi_mutex_static_unlock(&default_context_lock);
 
-// #if defined(ENABLE_LOGGING) && !defined(ENABLE_DEBUG_LOGGING)
-// 	if (NULL == ctx && default_context_options[LIBUSB_OPTION_LOG_LEVEL].is_set) {
-// 		_ctx->debug = default_context_options[LIBUSB_OPTION_LOG_LEVEL].arg.ival;
-// 	} else {
-// 		_ctx->debug = get_env_debug_level();
-// 	}
-// 	if (_ctx->debug != LIBUSB_LOG_LEVEL_NONE)
-// 		_ctx->debug_fixed = 1;
-// #endif
-
-// 	usbi_mutex_init(&_ctx->usb_devs_lock);
-// 	usbi_mutex_init(&_ctx->open_devs_lock);
-// 	list_init(&_ctx->usb_devs);
-// 	list_init(&_ctx->open_devs);
-
-// 	/* apply default options to all new contexts */
-// 	for (enum libusb_option option = 0 ; option < LIBUSB_OPTION_MAX ; option++) {
-// 		if (LIBUSB_OPTION_LOG_LEVEL == option || !default_context_options[option].is_set) {
-// 			continue;
-// 		}
-// 		r = libusb_set_option(_ctx, option);
-// 		if (LIBUSB_SUCCESS != r)
-// 			goto err_free_ctx;
-// 	}
-
-// 	/* default context must be initialized before calling usbi_dbg */
-// 	if (!ctx) {
-// 		usbi_default_context = _ctx;
-// 		default_context_refcnt = 1;
-// 		usbi_dbg(usbi_default_context, "created default context");
-// 	}
-
-// 	usbi_dbg(_ctx, "libusb v%u.%u.%u.%u%s", libusb_version_internal.major, libusb_version_internal.minor,
-// 		libusb_version_internal.micro, libusb_version_internal.nano, libusb_version_internal.rc);
-
-// 	r = usbi_io_init(_ctx);
-// 	if (r < 0)
-// 		goto err_free_ctx;
-
-// 	usbi_mutex_static_lock(&active_contexts_lock);
-// 	list_add(&_ctx->list, &active_contexts_list);
-// 	usbi_mutex_static_unlock(&active_contexts_lock);
-
-// 	usbi_hotplug_init(_ctx);
-
-// 	if (usbi_backend.init) {
-// 		r = usbi_backend.init(_ctx);
-// 		if (r)
-// 			goto err_io_exit;
-// 	}
-
-// 	if (ctx)
-// 		*ctx = _ctx;
-
-// 	usbi_mutex_static_unlock(&default_context_lock);
-
-// 	return 0;
-
-// err_io_exit:
-// 	usbi_mutex_static_lock(&active_contexts_lock);
-// 	list_del(&_ctx->list);
-// 	usbi_mutex_static_unlock(&active_contexts_lock);
-
-// 	usbi_hotplug_exit(_ctx);
-// 	usbi_io_exit(_ctx);
-
-// err_free_ctx:
-// 	if (!ctx) {
-// 		/* clear default context that was not fully initialized */
-// 		usbi_default_context = NULL;
-// 		default_context_refcnt = 0;
-// 	}
-
-// 	usbi_mutex_destroy(&_ctx->open_devs_lock);
-// 	usbi_mutex_destroy(&_ctx->usb_devs_lock);
-
-// 	free(_ctx);
-
-// 	usbi_mutex_static_unlock(&default_context_lock);
-
-// 	return r;
+	return r;
 }
 
 /** \ingroup libusb_lib
